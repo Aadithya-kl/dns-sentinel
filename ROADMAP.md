@@ -8,7 +8,7 @@ This roadmap describes intent, not promises. Work is prioritized by correctness,
 - [x] Per-query DNS failure handling and machine-readable JSON
 - [x] Basic SPF, DMARC, CAA, MX, NS, and DNSSEC record-presence checks
 - [x] Deterministic unit tests, packaging, and CI foundations
-- [ ] Independent review against relevant RFCs before stable release
+- [ ] Independent review against relevant RFCs, including RFC 9989, before stable release
 
 ## Next (0.2)
 
