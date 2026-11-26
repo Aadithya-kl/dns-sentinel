@@ -8,6 +8,7 @@ This roadmap describes intent, not promises. Work is prioritized by correctness,
 - [x] Per-query DNS failure handling and machine-readable JSON
 - [x] Basic SPF, DMARC, CAA, MX, NS, and DNSSEC record-presence checks
 - [x] Deterministic unit tests, packaging, and CI foundations
+- [x] PyPI Trusted Publishing release workflow and provenance attestations
 - [ ] Independent review against relevant RFCs, including RFC 9989, before stable release
 
 ## Next (0.2)
@@ -22,7 +23,7 @@ This roadmap describes intent, not promises. Work is prioritized by correctness,
 - Optional, clearly separated cryptographic DNSSEC validation using a vetted validator/library
 - Mail DNS checks for DKIM selectors only when explicitly supplied by the user
 - Baseline comparison and monitoring integrations, only with transparent privacy controls
-- Release automation, signed artifacts, provenance, and OpenSSF scorecard review
+- OpenSSF Scorecard review
 
 ## Out of scope until reviewed
 

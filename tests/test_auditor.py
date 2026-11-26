@@ -35,7 +35,9 @@ def test_domain_normalization(value: str, expected: str) -> None:
     assert normalize_domain(value) == expected
 
 
-@pytest.mark.parametrize("value", ["", "https://example.com", "localhost", "-bad.example", "a..b"])
+@pytest.mark.parametrize(
+    "value", ["", "https://example.com", "127.0.0.1", "localhost", "-bad.example", "a..b"]
+)
 def test_domain_rejects_invalid_input(value: str) -> None:
     with pytest.raises(ValueError):
         normalize_domain(value)
@@ -52,6 +54,26 @@ def test_spf_requires_one_policy_and_rejects_duplicates() -> None:
 def test_spf_rejects_malformed_mechanism() -> None:
     a = auditor({("example.com", "TXT"): ['"v=spf1 ip4:not-an-ip -all"']})
     assert a.audit("example.com").findings[0].status == "fail"
+
+
+@pytest.mark.parametrize(
+    "policy,expected",
+    [
+        ("v=spf1 a/32 mx//128 ptr:example.com -all", "pass"),
+        ("v=spf1 a/33 -all", "fail"),
+        ("v=spf1 mx//129 -all", "fail"),
+        ("v=spf1 ptr/24 -all", "fail"),
+        ("v=spf1 --all", "fail"),
+        ("v=spf1 ??all", "fail"),
+        ("v=spf1 +redirect:example.com -all", "fail"),
+        ("v=spf1 ~exp=errors.example.com -all", "fail"),
+    ],
+)
+def test_spf_rejects_out_of_range_prefixes_and_qualifiers(
+    policy: str, expected: str
+) -> None:
+    result = auditor({("example.com", "TXT"): [f'"{policy}"']}).audit("example.com").findings[0]
+    assert result.status == expected
 
 
 @pytest.mark.parametrize(
