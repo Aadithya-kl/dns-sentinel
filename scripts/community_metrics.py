@@ -59,7 +59,7 @@ def main() -> int:
 
     count = len(authors)
     summary = (
-        "## DNS Sentinel weekly health\n\n"
+        "## DNS Sentinel project health\n\n"
         f"- Merged PRs found in the last 365 days: {total_merged}\n"
         f"- Unique external, non-bot PR authors: {count}/20\n"
         f"- Remaining contributors for the community-builder threshold: {max(0, 20 - count)}\n"
