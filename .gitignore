@@ -9,3 +9,6 @@ dist/
 *.egg-info/
 .coverage
 htmlcov/
+outputs/
+work/
+.DS_Store
