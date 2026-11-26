@@ -158,6 +158,23 @@ def test_resolver_failures_are_reported_as_warnings(failure: Exception) -> None:
     assert "Could not query" in result.message
 
 
+@pytest.mark.parametrize(
+    "failure",
+    [dns.resolver.NoResolverConfiguration(), OSError("network unreachable")],
+)
+def test_resolver_config_and_os_errors_warn_and_continue(failure: Exception) -> None:
+    data = {
+        ("example.com", "CAA"): failure,
+        ("example.com", "NS"): ["ns1.example.net.", "ns2.example.net."],
+    }
+    findings = auditor(data).audit("example.com").findings
+    assert len(findings) == 6
+    assert findings[2].status == "error"
+    assert findings[2].severity == "warning"
+    assert "DNS resolver unavailable" in findings[2].message
+    assert findings[4].status == "pass"
+
+
 def test_mx_rejects_invalid_preference() -> None:
     result = (
         auditor({("example.com", "MX"): ["70000 mail.example.com."]})
