@@ -1,0 +1,32 @@
+name: Bug report
+description: Report a reproducible incorrect result or crash
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include secrets or private DNS data. Please verify the issue against the documented MVP limits.
+  - type: input
+    id: version
+    attributes:
+      label: DNS Sentinel version
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result and evidence
+      description: Include relevant DNS output with sensitive values redacted and standards references if applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true

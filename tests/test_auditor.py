@@ -1,0 +1,160 @@
+from __future__ import annotations
+
+import dns.exception
+import dns.resolver
+import pytest
+
+from dns_sentinel.auditor import Auditor, normalize_domain
+
+
+class Answer(list[str]):
+    @property
+    def rrset(self) -> object:
+        return self if self else None
+
+
+class Resolver:
+    def __init__(self, data: dict[tuple[str, str], list[str] | Exception]):
+        self.data = data
+
+    def resolve(self, name: str, kind: str, **kwargs: object) -> Answer:
+        value = self.data.get((name, kind), [])
+        if isinstance(value, Exception):
+            raise value
+        return Answer(value)
+
+
+def auditor(data: dict[tuple[str, str], list[str] | Exception]) -> Auditor:
+    return Auditor(resolver=Resolver(data))
+
+
+@pytest.mark.parametrize(
+    "value,expected", [("Example.COM.", "example.com"), ("bücher.de", "xn--bcher-kva.de")]
+)
+def test_domain_normalization(value: str, expected: str) -> None:
+    assert normalize_domain(value) == expected
+
+
+@pytest.mark.parametrize("value", ["", "https://example.com", "localhost", "-bad.example", "a..b"])
+def test_domain_rejects_invalid_input(value: str) -> None:
+    with pytest.raises(ValueError):
+        normalize_domain(value)
+
+
+def test_spf_requires_one_policy_and_rejects_duplicates() -> None:
+    a = auditor({("example.com", "TXT"): ['"v=spf1 -all"', '"hello"']})
+    assert a.audit("example.com").findings[0].status == "pass"
+    b = auditor({("example.com", "TXT"): ['"v=spf1 -all"', '"v=spf1 ~all"']})
+    result = b.audit("example.com").findings[0]
+    assert result.status == "fail" and result.severity == "error"
+
+
+def test_spf_rejects_malformed_mechanism() -> None:
+    a = auditor({("example.com", "TXT"): ['"v=spf1 ip4:not-an-ip -all"']})
+    assert a.audit("example.com").findings[0].status == "fail"
+
+
+@pytest.mark.parametrize(
+    "record,expected",
+    [
+        ("v=DMARC1; p=reject; pct=100", "pass"),
+        ("v=DMARC1; p=invalid", "fail"),
+        ("v=DMARC1; p=none; pct=101", "fail"),
+        ("v=DMARC1; p=none; p=reject", "fail"),
+    ],
+)
+def test_dmarc_policy_validation(record: str, expected: str) -> None:
+    result = (
+        auditor({("_dmarc.example.com", "TXT"): [f'"{record}"']}).audit("example.com").findings[1]
+    )
+    assert result.status == expected
+
+
+def test_dmarc_requires_version_first_and_accepts_rua_size() -> None:
+    wrong_order = (
+        auditor({("_dmarc.example.com", "TXT"): ['"p=reject; v=DMARC1"']})
+        .audit("example.com")
+        .findings[1]
+    )
+    assert wrong_order.status == "fail"
+    valid_uri = (
+        auditor(
+            {
+                ("_dmarc.example.com", "TXT"): [
+                    '"v=DMARC1; p=reject; rua=mailto:reports@example.com!10m"'
+                ]
+            }
+        )
+        .audit("example.com")
+        .findings[1]
+    )
+    assert valid_uri.status == "pass"
+
+
+def test_caa_mx_ns_checks() -> None:
+    data = {
+        ("example.com", "CAA"): ['0 issue "letsencrypt.org"'],
+        ("example.com", "MX"): ["10 mail.example.com."],
+        ("example.com", "NS"): ["ns1.example.net.", "ns2.example.net."],
+    }
+    findings = auditor(data).audit("example.com").findings
+    assert [findings[i].status for i in (2, 3, 4)] == ["pass", "pass", "pass"]
+
+
+def test_null_mx_and_malformed_caa() -> None:
+    data = {("example.com", "MX"): ["0 ."], ("example.com", "CAA"): ["999 nonsense value"]}
+    findings = auditor(data).audit("example.com").findings
+    assert findings[2].status == "fail"
+    assert findings[3].status == "pass"
+
+
+def test_dnssec_is_explicitly_presence_only() -> None:
+    data = {("example.com", "DNSKEY"): ["256 3 13 abc"], ("example.com", "DS"): ["1 1 1 abc"]}
+    result = auditor(data).audit("example.com").findings[-1]
+    assert result.status == "pass"
+    assert "not cryptographically validated" in result.message
+
+
+def test_dns_errors_do_not_abort_other_checks() -> None:
+    data = {
+        ("example.com", "TXT"): dns.resolver.NXDOMAIN(),
+        ("example.com", "CAA"): dns.exception.Timeout(),
+        ("example.com", "NS"): ["ns1.example.net.", "ns2.example.net."],
+    }
+    findings = auditor(data).audit("example.com").findings
+    assert len(findings) == 6
+    assert findings[2].severity == "warning"
+    assert findings[4].status == "pass"
+
+
+@pytest.mark.parametrize(
+    "failure", [dns.resolver.LifetimeTimeout(timeout=1, errors=[]), dns.resolver.NoNameservers()]
+)
+def test_resolver_failures_are_reported_as_warnings(failure: Exception) -> None:
+    result = auditor({("example.com", "CAA"): failure}).audit("example.com").findings[2]
+    assert result.severity == "warning"
+    assert "Could not query" in result.message
+
+
+def test_mx_rejects_invalid_preference() -> None:
+    result = (
+        auditor({("example.com", "MX"): ["70000 mail.example.com."]})
+        .audit("example.com")
+        .findings[3]
+    )
+    assert result.status == "fail"
+
+
+def test_ns_duplicate_target_does_not_fake_redundancy() -> None:
+    result = (
+        auditor({("example.com", "NS"): ["ns1.example.net.", "NS1.example.net."]})
+        .audit("example.com")
+        .findings[4]
+    )
+    assert result.status == "fail"
+
+
+def test_report_json_shape() -> None:
+    report = auditor({}).audit("example.com")
+    assert report.to_dict()["domain"] == "example.com"
+    assert len(report.to_dict()["findings"]) == 6
