@@ -1,9 +1,9 @@
-name: Weekly project health
+name: Hourly project health
 
 on:
   schedule:
-    # 09:00 Asia/Kolkata every Monday (GitHub Actions schedules use UTC).
-    - cron: "30 3 * * 1"
+    # Run near the top of each hour; GitHub Actions schedules use UTC.
+    - cron: "17 * * * *"
   workflow_dispatch:
 
 permissions:
