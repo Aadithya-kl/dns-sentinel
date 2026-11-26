@@ -121,12 +121,15 @@ class Auditor:
         tokens = spf[0].lower().split()
         if tokens[0] != "v=spf1" or len(tokens) < 2:
             return Finding("spf", "fail", "error", "SPF policy is empty or malformed.", tuple(spf))
-        mechanisms = [t.lstrip("+-~?") for t in tokens[1:]]
+        mechanism_terms = [
+            (t[0], t[1:]) if t[:1] in "+-~?" else ("", t) for t in tokens[1:]
+        ]
+        mechanisms = [mechanism for _, mechanism in mechanism_terms]
         seen_modifiers: set[str] = set()
-        for mechanism in mechanisms:
+        for qualifier, mechanism in mechanism_terms:
             if mechanism.startswith(("redirect=", "exp=")):
                 key, value = mechanism.split("=", 1)
-                if key in seen_modifiers or not value or "." not in value:
+                if qualifier or key in seen_modifiers or not value or "." not in value:
                     return Finding(
                         "spf",
                         "fail",
@@ -146,13 +149,17 @@ class Auditor:
                     "SPF 'all' mechanism cannot take an argument.",
                     tuple(spf),
                 )
-            if kind in {"a", "mx", "ptr"}:
-                valid = (
-                    re.fullmatch(
-                        r"(?:a|mx|ptr)(?::[a-z0-9.-]+)?(?:/[0-9]{1,2})?(?://[0-9]{1,3})?", mechanism
-                    )
-                    is not None
+            if kind in {"a", "mx"}:
+                match = re.fullmatch(
+                    r"(?:a|mx)(?::[a-z0-9.-]+)?(?:/(?P<ipv4>[0-9]{1,2}))?"
+                    r"(?://(?P<ipv6>[0-9]{1,3}))?",
+                    mechanism,
                 )
+                valid = match is not None and (
+                    match.group("ipv4") is None or int(match.group("ipv4")) <= 32
+                ) and (match.group("ipv6") is None or int(match.group("ipv6")) <= 128)
+            elif kind == "ptr":
+                valid = re.fullmatch(r"ptr(?::[a-z0-9.-]+)?", mechanism) is not None
             elif kind == "ip4":
                 try:
                     ipaddress.IPv4Network(argument, strict=False)

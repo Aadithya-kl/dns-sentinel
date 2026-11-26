@@ -55,6 +55,26 @@ def test_spf_rejects_malformed_mechanism() -> None:
 
 
 @pytest.mark.parametrize(
+    "policy,expected",
+    [
+        ("v=spf1 a/32 mx//128 ptr:example.com -all", "pass"),
+        ("v=spf1 a/33 -all", "fail"),
+        ("v=spf1 mx//129 -all", "fail"),
+        ("v=spf1 ptr/24 -all", "fail"),
+        ("v=spf1 --all", "fail"),
+        ("v=spf1 ??all", "fail"),
+        ("v=spf1 +redirect:example.com -all", "fail"),
+        ("v=spf1 ~exp=errors.example.com -all", "fail"),
+    ],
+)
+def test_spf_rejects_out_of_range_prefixes_and_qualifiers(
+    policy: str, expected: str
+) -> None:
+    result = auditor({("example.com", "TXT"): [f'"{policy}"']}).audit("example.com").findings[0]
+    assert result.status == expected
+
+
+@pytest.mark.parametrize(
     "record,expected",
     [
         ("v=DMARC1; p=reject; pct=100", "pass"),

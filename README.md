@@ -7,14 +7,20 @@ DNS Sentinel is a read-only command-line tool and Python library for a first-pas
 Requires Python 3.10 or newer.
 
 ```sh
+python -m pip install dns-sentinel
+dns-sentinel example.com
+dns-sentinel example.com --json
+```
+
+To install the development version from source:
+
+```sh
 git clone https://github.com/kkevadiya54/dns-sentinel.git
 cd dns-sentinel
 python -m pip install .
 dns-sentinel example.com
 dns-sentinel example.com --json
 ```
-
-The first PyPI release is prepared but pending PyPI Trusted Publishing setup; until it is released, install from the repository as shown above.
 
 Exit status is `0` when no error-severity findings exist, `1` when an error-severity finding exists, and `2` when input or runtime setup prevents an audit. Warnings can indicate missing controls or incomplete answers. Network timeouts are reported per check and do not discard other results.
 
@@ -62,9 +68,11 @@ Integration checks can query a domain you control, for example `dns-sentinel exa
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md), the [Code of Conduct](CODE_OF_CONDUCT.md), [SECURITY.md](SECURITY.md), and [COMMUNITY.md](COMMUNITY.md). Small reproducible fixes, standards-backed tests, documentation improvements, and carefully scoped record checks are welcome. Please do not claim a check validates more than it does.
 
+Browse [beginner-friendly issues](https://github.com/kkevadiya54/dns-sentinel/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) or join the [beta testing invitation](https://github.com/kkevadiya54/dns-sentinel/issues/5). Please comment before starting work on issues that ask for maintainer alignment.
+
 ## Project status
 
-Alpha software. No external contributors, package downloads, adoption, or certifications are claimed. See [ROADMAP.md](ROADMAP.md) for the staged plan and honest limits.
+Alpha software. Version 0.1.0 is available on PyPI. Community growth and protocol coverage remain ongoing work; see [ROADMAP.md](ROADMAP.md) for the staged plan and limits.
 
 ## License
 
