@@ -35,7 +35,9 @@ def test_domain_normalization(value: str, expected: str) -> None:
     assert normalize_domain(value) == expected
 
 
-@pytest.mark.parametrize("value", ["", "https://example.com", "localhost", "-bad.example", "a..b"])
+@pytest.mark.parametrize(
+    "value", ["", "https://example.com", "127.0.0.1", "localhost", "-bad.example", "a..b"]
+)
 def test_domain_rejects_invalid_input(value: str) -> None:
     with pytest.raises(ValueError):
         normalize_domain(value)

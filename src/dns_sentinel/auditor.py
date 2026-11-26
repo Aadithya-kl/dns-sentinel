@@ -42,6 +42,12 @@ def normalize_domain(domain: str) -> str:
         ascii_name = value.encode("idna").decode("ascii").lower()
     except UnicodeError as exc:
         raise ValueError("Domain is not valid IDNA.") from exc
+    try:
+        ipaddress.ip_address(ascii_name)
+    except ValueError:
+        pass
+    else:
+        raise ValueError("Provide a DNS domain name, not an IP address.")
     if len(ascii_name) > 253 or "." not in ascii_name:
         raise ValueError("Provide a fully qualified domain name (for example, example.com).")
     labels = ascii_name.split(".")
