@@ -7,10 +7,14 @@ DNS Sentinel is a read-only command-line tool and Python library for a first-pas
 Requires Python 3.10 or newer.
 
 ```sh
-python -m pip install dns-sentinel
+git clone https://github.com/kkevadiya54/dns-sentinel.git
+cd dns-sentinel
+python -m pip install .
 dns-sentinel example.com
 dns-sentinel example.com --json
 ```
+
+The first PyPI release is prepared but pending PyPI Trusted Publishing setup; until it is released, install from the repository as shown above.
 
 Exit status is `0` when no error-severity findings exist, `1` when an error-severity finding exists, and `2` when input or runtime setup prevents an audit. Warnings can indicate missing controls or incomplete answers. Network timeouts are reported per check and do not discard other results.
 
@@ -21,7 +25,7 @@ Use only for domains you are authorized to assess. The tool sends ordinary DNS q
 | Check | MVP behavior | Not claimed |
 | --- | --- | --- |
 | SPF | Detects zero/multiple policies and performs basic token sanity checks | Full RFC 7208 evaluation, include/redirect expansion, DNS lookup limits, or authorization outcome |
-| DMARC | Requires one `_dmarc` TXT policy and validates version, policy, duplicate tags, `pct`, and basic `rua` syntax | Full RFC 7489/9091 semantics, organizational-domain discovery, or report processing |
+| DMARC | Requires one `_dmarc` TXT policy and validates version, policy, duplicate tags, `pct`, and basic `rua` syntax | Full RFC 9989 semantics, organizational-domain discovery, or report processing |
 | CAA | Checks returned CAA tag names and flags | Complete CAA tree-walk inheritance, issuer authorization semantics, or certificate issuance outcome |
 | MX | Checks preference/exchange shape, duplicate targets, and RFC 7505 null MX | Whether each mail host is reachable or correctly configured |
 | NS | Counts distinct returned NS targets | Independent operators, networks, geographic diversity, or authoritative delegation consistency |
